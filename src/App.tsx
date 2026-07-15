@@ -826,7 +826,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8">
         {error && (
           <div className="mb-6 p-6 bg-red-50 border border-red-200 rounded-2xl flex flex-col items-center gap-4 text-center">
             <div className="flex items-center gap-3 text-red-700">
@@ -843,9 +843,9 @@ export default function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column: Single Page Form */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6 space-y-8">
               {/* Step 1: Search */}
               <div className="space-y-4">
