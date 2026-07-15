@@ -61,14 +61,6 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
-  const [quantityInput, setQuantityInput] = useState<string>("1");
-
-  useEffect(() => {
-    const currentInputNumeric = parseInt(quantityInput.replace(/[^0-9]/g, ''), 10) || 0;
-    if (currentInputNumeric !== quantity) {
-      setQuantityInput(quantity.toLocaleString());
-    }
-  }, [quantity]);
   
   // Assessment List
   const [items, setItems] = useState<AssessmentItem[]>([]);
@@ -236,7 +228,7 @@ export default function App() {
         children: [
           new TableCell({ children: [new Paragraph({ text: (index + 1).toString(), alignment: AlignmentType.CENTER })] }),
           new TableCell({ children: [new Paragraph({ text: item.material.name })] }),
-          new TableCell({ children: [new Paragraph({ text: item.quantity.toLocaleString(), alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ text: item.quantity.toString(), alignment: AlignmentType.CENTER })] }),
           new TableCell({ children: [new Paragraph({ text: item.material.unit, alignment: AlignmentType.CENTER })] }),
           new TableCell({ children: [new Paragraph({ text: item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), alignment: AlignmentType.RIGHT })] }),
         ],
@@ -248,7 +240,7 @@ export default function App() {
         children: [
           new TableCell({ children: [new Paragraph({ text: (index + 1).toString(), alignment: AlignmentType.CENTER })] }),
           new TableCell({ children: [new Paragraph({ text: item.material.name })] }),
-          new TableCell({ children: [new Paragraph({ text: item.quantity.toLocaleString(), alignment: AlignmentType.CENTER })] }),
+          new TableCell({ children: [new Paragraph({ text: item.quantity.toString(), alignment: AlignmentType.CENTER })] }),
           new TableCell({ children: [new Paragraph({ text: item.material.unit, alignment: AlignmentType.CENTER })] }),
           new TableCell({ children: [new Paragraph({ text: item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), alignment: AlignmentType.RIGHT })] }),
         ],
@@ -661,7 +653,7 @@ export default function App() {
       }
 
       // Table column widths (total = 160 mm = cW)
-      const colWidths = [18, 83, 18, 14, 27];
+      const colWidths = [20, 76, 16, 16, 32];
 
       // Helper: render autoTable and return finalY
       const drawTable = (startY: number, bodyRows: string[][]): number => {
@@ -690,9 +682,9 @@ export default function App() {
             halign: 'center',
           },
           columnStyles: {
-            0: { halign: 'center', cellWidth: colWidths[0], cellPadding: { top: 2, bottom: 2, left: 1, right: 1 } },
+            0: { halign: 'center', cellWidth: colWidths[0] },
             1: { halign: 'left',   cellWidth: colWidths[1] },
-            2: { halign: 'right',  cellWidth: colWidths[2] },
+            2: { halign: 'center', cellWidth: colWidths[2] },
             3: { halign: 'center', cellWidth: colWidths[3] },
             4: { halign: 'right',  cellWidth: colWidths[4] },
           },
@@ -711,7 +703,7 @@ export default function App() {
       const damagedRows: string[][] = damagedItems.map((item, idx) => [
         String(idx + 1),
         item.material.name,
-        item.quantity.toLocaleString(),
+        String(item.quantity),
         item.material.unit,
         fmt(item.totalPrice),
       ]);
@@ -731,14 +723,13 @@ export default function App() {
       const reusableRows: string[][] = reusableItems.map((item, idx) => [
         String(idx + 1),
         item.material.name,
-        item.quantity.toLocaleString(),
+        String(item.quantity),
         item.material.unit,
         fmt(item.totalPrice),
       ]);
       while (reusableRows.length < 5) reusableRows.push(['', '', '', '', '']);
 
-      y = drawTable(y, reusableRows) + 5;
-      y += lh; // เคาะบรรทัด 1 ครั้ง
+      y = drawTable(y, reusableRows) + 8;
 
       // ---- วรรคปิด ----
       setF('normal', 16);
@@ -920,26 +911,12 @@ export default function App() {
                   </div>
                   <div className="space-y-4">
                     <input 
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                      type="number"
+                      min="1"
                       disabled={!selectedMaterial}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-2xl font-bold text-center"
-                      value={quantityInput}
-                      onChange={(e) => {
-                        const rawValue = e.target.value;
-                        const cleaned = rawValue.replace(/[^0-9]/g, '');
-                        if (cleaned === '') {
-                          setQuantityInput('');
-                          setQuantity(1);
-                          return;
-                        }
-                        const parsed = parseInt(cleaned, 10);
-                        if (!isNaN(parsed)) {
-                          setQuantityInput(parsed.toLocaleString());
-                          setQuantity(parsed);
-                        }
-                      }}
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                     />
                     <div className="grid grid-cols-4 gap-2">
                       {[1, 2, 5, 10].map(n => (
@@ -1040,7 +1017,7 @@ export default function App() {
                       </div>
                       <div className="flex justify-between items-end">
                         <p className="text-xs text-slate-500">
-                          {item.quantity.toLocaleString()} {item.material.unit} x ฿{(item.status === 'damaged' ? item.material.priceDamaged : item.material.priceReusable).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {item.quantity} {item.material.unit} x ฿{(item.status === 'damaged' ? item.material.priceDamaged : item.material.priceReusable).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                         <p className="font-bold text-blue-600">฿{item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
@@ -1186,7 +1163,7 @@ export default function App() {
                   <tr key={idx}>
                     <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'center' }}>{idx + 1}</td>
                     <td style={{ border: '1px solid black', padding: '8px 5px' }}>{item.material.name}</td>
-                    <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'center' }}>{item.quantity.toLocaleString()}</td>
+                    <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'center' }}>{item.quantity}</td>
                     <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'center' }}>{item.material.unit}</td>
                     <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'right' }}>{item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
@@ -1222,7 +1199,7 @@ export default function App() {
                   <tr key={idx}>
                     <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'center' }}>{idx + 1}</td>
                     <td style={{ border: '1px solid black', padding: '8px 5px' }}>{item.material.name}</td>
-                    <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'center' }}>{item.quantity.toLocaleString()}</td>
+                    <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'center' }}>{item.quantity}</td>
                     <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'center' }}>{item.material.unit}</td>
                     <td style={{ border: '1px solid black', padding: '8px 5px', textAlign: 'right' }}>{item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
