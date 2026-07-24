@@ -18,7 +18,8 @@ import {
   Download,
   Package,
   Settings2,
-  RefreshCw
+  RefreshCw,
+  ChevronDown
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
@@ -74,13 +75,39 @@ export default function App() {
   const [items, setItems] = useState<AssessmentItem[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+  // Selected Sheet State
+  const sheetOptions = [
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 3/2569',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 2/2569',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 1/2569',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 3/2568',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 2/2568',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 1/2568',
+  ];
+
+  const SHEET_GIDS: Record<string, string> = {
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 3/2569': '0',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 2/2569': '105388871',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 1/2569': '1972078162',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 3/2568': '1688423232',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 2/2568': '1052539521',
+    'ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 1/2568': '1417798826',
+  };
+
+  const [selectedSheet, setSelectedSheet] = useState<string>('ราคาพัสดุแบบสำเร็จรูป ครั้งที่ 3/2569');
+
   // Fetch data from Google Sheet
-  const fetchData = async () => {
+  const fetchData = async (sheetName?: string) => {
+    const targetSheet = sheetName !== undefined ? sheetName : selectedSheet;
+    const gid = SHEET_GIDS[targetSheet];
     try {
       setLoading(true);
       setError(null);
-      const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv`;
-      const response = await fetch(url);
+
+      const url = gid !== undefined
+        ? `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&gid=${gid}&_t=${Date.now()}`
+        : `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(targetSheet)}&_t=${Date.now()}`;
+      const response = await fetch(url, { cache: 'no-store' });
       
       if (!response.ok) {
         throw new Error('Network response was not ok');
@@ -122,6 +149,27 @@ export default function App() {
             setError('ไม่สามารถดึงข้อมูลพัสดุได้ กรุณาตรวจสอบรูปแบบข้อมูลใน Sheet');
           } else {
             setMaterials(mappedData);
+
+            // Update currently selected material in Step 1 if active
+            setSelectedMaterial((prevMat) => {
+              if (!prevMat) return null;
+              const updated = mappedData.find((m) => m.id === prevMat.id);
+              return updated || prevMat;
+            });
+
+            // Update items in current assessment list with new prices if sheet changes
+            setItems((prevItems) => {
+              if (prevItems.length === 0) return prevItems;
+              return prevItems.map((item) => {
+                const updatedMaterial = mappedData.find((m) => m.id === item.material.id) || item.material;
+                const unitPrice = item.status === 'damaged' ? updatedMaterial.priceDamaged : updatedMaterial.priceReusable;
+                return {
+                  ...item,
+                  material: updatedMaterial,
+                  totalPrice: item.quantity * unitPrice,
+                };
+              });
+            });
           }
           setLoading(false);
         },
@@ -139,8 +187,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(selectedSheet);
+  }, [selectedSheet]);
 
   const filteredMaterials = useMemo(() => {
     if (!searchQuery) return [];
@@ -804,21 +852,45 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 pb-20">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-100">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-100 mt-1">
               <Settings2 className="w-6 h-6 text-white" />
             </div>
-            <div>
+            <div className="space-y-1">
               <h1 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
                 ค่าละเมิด1234
               </h1>
               <p className="text-xs md:text-sm text-slate-500 font-medium">
                 ราคาพัสดุแบบสำเร็จรูป สำหรับการประเมินค่าเสียหายที่เกิดกับระบบจำหน่ายและระบบสายส่ง : กฟต.3
               </p>
+              
+              {/* Dropdown list for selecting sheet/version directly below "ราคาพัสดุแบบสำเร็จรูป" */}
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs font-semibold text-slate-600 shrink-0">
+                  เลือกฉบับราคา:
+                </span>
+                <div className="relative inline-flex items-center">
+                  <select
+                    id="sheet-select"
+                    value={selectedSheet}
+                    onChange={(e) => {
+                      setSelectedSheet(e.target.value);
+                    }}
+                    className="text-xs font-semibold bg-blue-50/80 hover:bg-blue-100/80 text-blue-800 border border-blue-200 hover:border-blue-300 rounded-lg px-2.5 py-1 pr-7 outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer shadow-2xs appearance-none"
+                  >
+                    {sheetOptions.map((sheet) => (
+                      <option key={sheet} value={sheet}>
+                        {sheet}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-blue-600 absolute right-2 pointer-events-none" />
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 self-end sm:self-center">
             <div className="text-right hidden sm:block">
               <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Total Assessment</p>
               <p className="text-xl font-black text-blue-600">฿{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
