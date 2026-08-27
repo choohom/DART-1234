@@ -1,6 +1,7 @@
 
 import { AssessmentItem } from '../types';
 import { groupItems } from '../services/exportService';
+import { PEA_LOGO_DATA_URL } from '../peaLogo';
 
 interface PDFTemplateProps {
     items: AssessmentItem[];
@@ -15,9 +16,9 @@ export const PDFTemplate = ({ items, totalAmount }: PDFTemplateProps) => {
           <div style={{ minHeight: '277mm', position: 'relative' }}>
             <img 
               src="https://img1.pic.in.th/images/PEA-02-Thai-Logo.md.jpg" 
-              alt="Logo" 
-              style={{ width: '41.5mm', height: '34.9mm', marginBottom: '3mm' }}
-              referrerPolicy="no-referrer"
+              onError={(e) => { e.currentTarget.src = PEA_LOGO_DATA_URL; }}
+              alt="Logo การไฟฟ้าส่วนภูมิภาค" 
+              style={{ width: '41.5mm', height: '34.9mm', objectFit: 'contain', marginBottom: '3mm' }}
             />
             {/* ... (rest of Page 1) ... */}
           </div>

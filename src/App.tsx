@@ -25,6 +25,7 @@ import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { THSarabunNew_normal, THSarabunNew_bold } from "../fonts";
+import { PEA_LOGO_BASE64, PEA_LOGO_DATA_URL } from './peaLogo';
 import { 
   Document, 
   Packer, 
@@ -246,19 +247,28 @@ export default function App() {
 
   const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  const exportWord = async () => {
-    // Helper to fetch image and convert to ArrayBuffer
-    const fetchImage = async (url: string) => {
+  const fetchImage = async (url: string): Promise<ArrayBuffer | null> => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.arrayBuffer();
+    } catch (error) {
+      console.warn("fetchImage fallback to embedded logo:", error);
       try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        return await blob.arrayBuffer();
-      } catch (error) {
-        console.error("Error fetching logo:", error);
+        const binary = atob(PEA_LOGO_BASE64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+      } catch (e) {
+        console.error("Error generating fallback logo buffer:", e);
         return null;
       }
-    };
+    }
+  };
 
+  const exportWord = async () => {
     const logoBuffer = await fetchImage("https://img1.pic.in.th/images/PEA-02-Thai-Logo.md.jpg");
 
     const damagedItems = groupItems(items.filter(i => i.status === 'damaged'));
@@ -383,10 +393,10 @@ export default function App() {
               children: [
                 new ImageRun({
                   data: logoBuffer,
-                  type: "jpg",
+                  type: "png",
                   transformation: {
-                    width: 157,
-                    height: 132,
+                    width: 157, // 4.15 cm at 96 DPI
+                    height: 132, // 3.49 cm at 96 DPI
                   },
                 }),
               ],
@@ -560,21 +570,25 @@ export default function App() {
       setF('normal', 16);
       let y = mT;
 
-      // Logo (optional — skip gracefully if fetch fails)
+      // Logo (Provincial Electricity Authority / PEA) - Size: Width 4.15 cm (41.5 mm), Height 3.49 cm (34.9 mm)
       try {
-        const logoRes = await fetch('https://img1.pic.in.th/images/PEA-02-Thai-Logo.md.jpg');
-        if (logoRes.ok) {
-          const logoBlob = await logoRes.blob();
-          const logoBase64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-            reader.readAsDataURL(logoBlob);
-          });
-          pdf.addImage(logoBase64, 'JPEG', mL, y, 41.5, 34.9);
-          y += 34.9 + 8;
+        const logoBuf = await fetchImage("https://img1.pic.in.th/images/PEA-02-Thai-Logo.md.jpg");
+        if (logoBuf) {
+          const bytes = new Uint8Array(logoBuf);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64Data = btoa(binary);
+          const isJpg = bytes[0] === 0xFF && bytes[1] === 0xD8;
+          const format = isJpg ? 'JPEG' : 'PNG';
+          pdf.addImage(`data:image/${isJpg ? 'jpeg' : 'png'};base64,${base64Data}`, format, mL, y, 41.5, 34.9);
+        } else {
+          pdf.addImage(PEA_LOGO_DATA_URL, 'PNG', mL, y, 41.5, 34.9);
         }
-      } catch {
-        // logo is optional — continue without it
+        y += 34.9 + 8;
+      } catch (err) {
+        console.error("Error adding logo to PDF:", err);
       }
 
       // จาก / ถึง / เลขที่ / วันที่
@@ -1187,9 +1201,9 @@ export default function App() {
           <div style={{ minHeight: '277mm', position: 'relative' }}>
             <img 
               src="https://img1.pic.in.th/images/PEA-02-Thai-Logo.md.jpg" 
-              alt="Logo" 
-              style={{ width: '41.5mm', height: '34.9mm', marginBottom: '3mm' }}
-              referrerPolicy="no-referrer"
+              onError={(e) => { e.currentTarget.src = PEA_LOGO_DATA_URL; }}
+              alt="Logo การไฟฟ้าส่วนภูมิภาค" 
+              style={{ width: '41.5mm', height: '34.9mm', objectFit: 'contain', marginBottom: '3mm' }}
             />
             
             <div style={{ display: 'flex', marginBottom: '3mm' }}>
