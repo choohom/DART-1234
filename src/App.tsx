@@ -77,6 +77,7 @@ export default function App() {
 
   // Selected Sheet State
   const sheetOptions = [
+    'ครั้งที่ 4/2569 เริ่มใช้ 11/8/2569',
     'ครั้งที่ 3/2569 เริ่มใช้ 27/4/2569',
     'ครั้งที่ 2/2569 เริ่มใช้ 31/3/2569',
     'ครั้งที่ 1/2569 เริ่มใช้ 17/3/2569',
@@ -86,6 +87,7 @@ export default function App() {
   ];
 
   const SHEET_GIDS: Record<string, string> = {
+    'ครั้งที่ 4/2569 เริ่มใช้ 11/8/2569': '154012769',
     'ครั้งที่ 3/2569 เริ่มใช้ 27/4/2569': '0',
     'ครั้งที่ 2/2569 เริ่มใช้ 31/3/2569': '105388871',
     'ครั้งที่ 1/2569 เริ่มใช้ 17/3/2569': '1972078162',
@@ -94,7 +96,7 @@ export default function App() {
     'ครั้งที่ 1/2568 เริ่มใช้ 3/3/2568': '1417798826',
   };
 
-  const [selectedSheet, setSelectedSheet] = useState<string>('ครั้งที่ 3/2569 เริ่มใช้ 27/4/2569');
+  const [selectedSheet, setSelectedSheet] = useState<string>('ครั้งที่ 4/2569 เริ่มใช้ 11/8/2569');
 
   // Fetch data from Google Sheet
   const fetchData = async (sheetName?: string) => {
